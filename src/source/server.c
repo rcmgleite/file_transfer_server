@@ -123,18 +123,27 @@ void *thread_function(void *args){
 	char *file_segment;
 	file_segment = malloc(((_thread_args*)args)->chunk_size * sizeof(*file_segment));
 	int bytes_read;
-	fprintf(stdout, "\n\nSERÃO LIDOS: %d\n", ((_thread_args*)args)->chunk_size);
-	fprintf(stdout, "\nTHREAD NUMBER: %d\n", ((_thread_args*)args)->thread_number);
+	fprintf(stdout, "\nSERÃO LIDOS: %d\n", ((_thread_args*)args)->chunk_size);
+	fprintf(stdout, "THREAD NUMBER: %d\n", ((_thread_args*)args)->thread_number);
 	lseek(((_thread_args*)args)->fd, ((_thread_args*)args)->file_offset, SEEK_SET);
 	bytes_read = read(((_thread_args*)args)->fd, file_segment, ((_thread_args*)args)->chunk_size);
 	if(bytes_read < 0)
 		fprintf(stderr, "\nErro ao tentar ler arquivo pedido\n\n");
+	//APENAS PARA TESTE
 	lseek(((_thread_args*)args)->fd_to_write, ((_thread_args*)args)->file_offset, SEEK_SET);
 	write(((_thread_args*)args)->fd_to_write, file_segment, ((_thread_args*)args)->chunk_size);
-	int result = write(((_thread_args*)args)->client_sock, file_segment, ((_thread_args*)args)->chunk_size);
-	if(result == -1){
-		fprintf(stderr, "\n\nErro ao tentar escrever para o cliente\n\n");
-	}
+	//APENAS PARA TESTE
+
+	/**
+	 *	O cliente precisa do offset, do tamanho que terá que escrever(para ler) e do segment
+	 **/
+	char c_offset[30], c_chunk_size[30];
+	sprintf(c_offset, "%d\n", ((_thread_args*)args)->file_offset);
+	sprintf(c_chunk_size, "%d\n", ((_thread_args*)args)->chunk_size);
+
+	write(((_thread_args*)args)->client_sock, c_offset, strlen(c_offset));
+	write(((_thread_args*)args)->client_sock, c_chunk_size, strlen(c_chunk_size));
+//	write(((_thread_args*)args)->client_sock, file_segment, ((_thread_args*)args)->chunk_size);
 	free(file_segment);
 	pthread_mutex_unlock(&_lock);
 	return NULL;
