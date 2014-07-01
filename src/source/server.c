@@ -57,13 +57,14 @@ int main(){
 			/**
 			 *	Tentativa de abrir arquivo fonte
 			 **/
-			char *file_path = build_file_path(read_buffer);
+			char *file_path = build_file_path(read_buffer, 0);
 			fd = open(file_path, O_RDONLY);
 
+			char *new_file_path = build_file_path(read_buffer, 1);
 			/**
 			 *	Abertura/Criação do arquivo destino
 			 **/
-			fd_to_write = open("/home/rafael/Desktop/rafael/C/proj_redes_server/Debug/teste_new.txt",O_RDWR | O_CREAT, S_IRUSR|S_IWUSR);
+			fd_to_write = open(new_file_path ,O_RDWR | O_CREAT, S_IRUSR|S_IWUSR);
 
 			if(fd == -1 || fd_to_write == -1){
 				fprintf(stderr, "Unable to open file!\n\n");
@@ -128,7 +129,6 @@ void *thread_function(void *args){
 	bytes_read = read(((_thread_args*)args)->fd, file_segment, ((_thread_args*)args)->chunk_size);
 	if(bytes_read < 0)
 		fprintf(stderr, "\nErro ao tentar ler arquivo pedido\n\n");
-	fprintf(stdout, "%s\n\n", file_segment);
 	lseek(((_thread_args*)args)->fd_to_write, ((_thread_args*)args)->file_offset, SEEK_SET);
 	write(((_thread_args*)args)->fd_to_write, file_segment, ((_thread_args*)args)->chunk_size);
 	int result = write(((_thread_args*)args)->client_sock, file_segment, ((_thread_args*)args)->chunk_size);

@@ -9,18 +9,23 @@
 #include <stdlib.h>
 #include "server_utils.h"
 
-char *build_file_path(char* file_name){
-	char *file_path = malloc(sizeof(ROOT_PATH) + sizeof(file_name));
-	strcpy(file_path, ROOT_PATH);
-
+char *build_file_path(char* file_name, int is_new){
 	size_t i, slen = strlen(file_name);
 	for (i = 0; i < slen; i++) {
 		if(file_name[i] == '\r')
 			file_name[i] = '\0';
 	}
 
+	char *file_path;
+	if(!is_new){
+		file_path = malloc(sizeof(ROOT_PATH) + sizeof(file_name));
+		strcpy(file_path, ROOT_PATH);
+	}
+	else{
+		file_path = malloc(sizeof(NEW_ROOT_PATH) + sizeof(file_name));
+		strcpy(file_path, NEW_ROOT_PATH);
+	}
 	strcat(file_path, file_name);
-
 	return file_path;
 }
 
