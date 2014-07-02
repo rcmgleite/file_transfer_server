@@ -143,7 +143,7 @@ void *thread_function(void *args){
 
 	write(((_thread_args*)args)->client_sock, c_offset, strlen(c_offset));
 	write(((_thread_args*)args)->client_sock, c_chunk_size, strlen(c_chunk_size));
-//	write(((_thread_args*)args)->client_sock, file_segment, ((_thread_args*)args)->chunk_size);
+	write(((_thread_args*)args)->client_sock, file_segment, ((_thread_args*)args)->chunk_size);
 	free(file_segment);
 	pthread_mutex_unlock(&_lock);
 	return NULL;

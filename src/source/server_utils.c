@@ -65,11 +65,10 @@ void print_header(int sock, int number_of_threads, int file_size){
 	char n_threads_string[10], file_size_string[10];
 	sprintf(n_threads_string, "%d\n", number_of_threads);
 	sprintf(file_size_string, "%d\n", file_size);
-	char bb[] = "\n\n";
-	int size = strlen(n_threads_string) + strlen(file_size_string) + strlen(bb);
+	int size = strlen(n_threads_string) + strlen(file_size_string);
 	char *header = malloc(size*sizeof(char));
 	strcat(header, n_threads_string);
 	strcat(header, file_size_string);
-	strcat(header, bb);
 	write_to_client(sock, header, size);
+	fprintf(stderr, "%s\n", header);
 }
