@@ -18,11 +18,11 @@ char *build_file_path(char* file_name, int is_new){
 
 	char *file_path;
 	if(!is_new){
-		file_path = malloc(sizeof(ROOT_PATH) + sizeof(file_name));
+		file_path = malloc(strlen(ROOT_PATH) + strlen(file_name));
 		strcpy(file_path, ROOT_PATH);
 	}
 	else{
-		file_path = malloc(sizeof(NEW_ROOT_PATH) + sizeof(file_name));
+		file_path = malloc(strlen(NEW_ROOT_PATH) + strlen(file_name));
 		strcpy(file_path, NEW_ROOT_PATH);
 	}
 	strcat(file_path, file_name);
@@ -39,30 +39,14 @@ int write_to_client(int sock, char *buf, int length){
 
 int read_from_client(int sock, char *buf, int len){
 	char *s = buf;
-//	int slen = len;
 	int c = recv(sock, s, len, 0);
 	fprintf(stderr, "LEU ALGUMA PARADA: %s\n", s);
-//	while((c > 0) && (s[c - 1] != '\n')){
-//		fprintf(stderr, "Entrou no while do read_from_client\n");
-//		s += c;
-//		slen -= c;
-//		c = recv(sock, s, slen, 0);
-//	}
-//	if(c < 0){
-//		return c;
-//	}
-//	else if(c == 0){
-//		buf[0] = '\0';
-//	}
-//	else{
-//		s[c-1] = '\0';
-//	}
 	return c;
 }
 
 
 void print_header(int sock, int number_of_threads, int file_size){
-	char n_threads_string[10], file_size_string[10];
+	char n_threads_string[255], file_size_string[255];
 	sprintf(n_threads_string, "%d\n", number_of_threads);
 	sprintf(file_size_string, "%d\n", file_size);
 	int size = strlen(n_threads_string) + strlen(file_size_string);
@@ -71,4 +55,5 @@ void print_header(int sock, int number_of_threads, int file_size){
 	strcat(header, file_size_string);
 	write_to_client(sock, header, size);
 	fprintf(stderr, "%s\n", header);
+	free(header);
 }

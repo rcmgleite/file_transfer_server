@@ -22,7 +22,7 @@ pthread_mutex_t _lock = PTHREAD_MUTEX_INITIALIZER;
 
 int main(){
 	int listener_d;			//socket que vai esperar pelas requests
-	int fd, fd_to_write;	//file descriptors que serão usados.. quando o cliente for escrito, o to_write será apagado
+	int fd;					//file descriptors que serão usados.. quando o cliente for escrito, o to_write será apagado
 	char read_buffer[255];  //buffer usado para armazenar dados que vem do cliente
 	int number_of_threads;
 	int file_size;
@@ -42,6 +42,12 @@ int main(){
 	fprintf(stdout, "Waiting for connections...\n");
 
 	while(TRUE){
+		/**
+		 * struct sockaddr_storage that is designed to be large enough to hold both IPv4 and IPv6 structures.
+		 * (See, for some calls, sometimes you don't know in advance if it's going to fill out your struct sockaddr
+		 * with an IPv4 or IPv6 address. So you pass in this parallel structure, very similar to struct
+		 * sockaddr except larger, and then cast it to the type you need
+		 **/
 		struct sockaddr_storage client_addr;
 		unsigned int address_size = sizeof(client_addr);
 		int connect_d = accept(listener_d, (struct sockaddr*)&client_addr, &address_size);
@@ -50,23 +56,18 @@ int main(){
 		}
 		fprintf(stderr, "Abriu o socket de conexão com o cliente\n");
 
-		if(write_to_client(connect_d, "Digite o nome do aquivo desejado\n", sizeof("Digite o nome do aquivo desejado\n")) != -1){
+		if(write_to_client(connect_d, "Digite o nome do aquivo desejado\n", strlen("Digite o nome do aquivo desejado\n")) != -1){
 			fprintf(stderr, "VAI BLOCAR NO RECV\n");
-			read_from_client(connect_d, read_buffer, sizeof(read_buffer));
+			read_from_client(connect_d, read_buffer, 255);
 			fprintf(stdout, "LEU A PORRA DO NOME DO ARQUIVO DO CLIENTE\n");
 			/**
 			 *	Tentativa de abrir arquivo fonte
 			 **/
 			char *file_path = build_file_path(read_buffer, 0);
 			fd = open(file_path, O_RDONLY);
+			free(file_path);
 
-			char *new_file_path = build_file_path(read_buffer, 1);
-			/**
-			 *	Abertura/Criação do arquivo destino
-			 **/
-			fd_to_write = open(new_file_path ,O_RDWR | O_CREAT, S_IRUSR|S_IWUSR);
-
-			if(fd == -1 || fd_to_write == -1){
+			if(fd == -1){
 				fprintf(stderr, "Unable to open file!\n\n");
 				write_to_client(connect_d, "Unable to open file!\n", strlen("Unable to open file!\n"));
 			}
@@ -98,7 +99,7 @@ int main(){
 				 *	Inicialização das threads
 				 **/
 				for(i = 0; i < number_of_threads; i++){
-					initialize_thread(&threads[i], &args[i], i, connect_d, fd, &file_size, &curr_offset, fd_to_write);
+					initialize_thread(&threads[i], &args[i], i, connect_d, fd, &file_size, &curr_offset);
 				}
 
 				//Apenas para o programa esperar as threads executarem
@@ -107,7 +108,7 @@ int main(){
 			    }
 
 			    // Limpo todos os dados para a próxima requesição
-			    clean_up(fd, fd_to_write, threads, args, &number_of_threads, &file_size, &curr_offset, file_path);
+			    clean_up(fd, threads, args, &number_of_threads, &file_size, &curr_offset);
 			}
 		}else{
 			fprintf(stderr, "Erro ao escrever mensagem para o cliente");
@@ -129,11 +130,6 @@ void *thread_function(void *args){
 	bytes_read = read(((_thread_args*)args)->fd, file_segment, ((_thread_args*)args)->chunk_size);
 	if(bytes_read < 0)
 		fprintf(stderr, "\nErro ao tentar ler arquivo pedido\n\n");
-	//APENAS PARA TESTE
-	lseek(((_thread_args*)args)->fd_to_write, ((_thread_args*)args)->file_offset, SEEK_SET);
-	write(((_thread_args*)args)->fd_to_write, file_segment, ((_thread_args*)args)->chunk_size);
-	//APENAS PARA TESTE
-
 	/**
 	 *	O cliente precisa do offset, do tamanho que terá que escrever(para ler) e do segment
 	 **/
@@ -149,12 +145,12 @@ void *thread_function(void *args){
 	return NULL;
 }
 
-void initialize_thread(pthread_t *thread, struct thread_args *args, int thread_number, int client_sock, int fd, int *file_size, int *curr_offset, int fd_to_write){
+void initialize_thread(pthread_t *thread, struct thread_args *args, int thread_number, int client_sock, int fd, int *file_size, int *curr_offset){
 	args->thread_number = thread_number;
 	args->client_sock = client_sock;
 	args->fd = fd;
-	args->fd_to_write = fd_to_write;
 	//parte da incialização que muda para cada thread
+
 	if(*file_size - FIRST_GUESS_OFFSET > 0){
 		//ainda está no ponto onde as threads escrevem exatamente o tamanho do chunk
 		args->file_offset = *curr_offset;
@@ -176,13 +172,11 @@ int get_numberof_threads(int file_size){
 	return (file_size / FIRST_GUESS_OFFSET + 1);
 }
 
-void clean_up(int fd, int fd_to_write, pthread_t *threads, struct thread_args *args, int *number_of_threads,
-		int *file_size, int *curr_offset, char *file_path){
+void clean_up(int fd, pthread_t *threads, struct thread_args *args, int *number_of_threads,
+		int *file_size, int *curr_offset){
     close(fd);
-    close(fd_to_write);
     free(threads);
     free(args);
-    free(file_path);
 	*number_of_threads = 0;
 	*file_size = 0;
 	*curr_offset = 0;
