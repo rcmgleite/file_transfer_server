@@ -40,7 +40,6 @@ int write_to_client(int sock, char *buf, int length){
 int read_from_client(int sock, char *buf, int len){
 	char *s = buf;
 	int c = recv(sock, s, len, 0);
-	fprintf(stderr, "LEU ALGUMA PARADA: %s\n", s);
 	return c;
 }
 

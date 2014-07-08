@@ -17,6 +17,7 @@
 #include "server.h"
 #include "server_conn_utils.h"
 #include "server_utils.h"
+#include <sys/resource.h>
 
 pthread_mutex_t _lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -27,6 +28,18 @@ int main(){
 	int number_of_threads;
 	int file_size;
 	int curr_offset = 0;
+	/**
+	 *	setrlimit está sendo usado para aumentar o número limite de file descriptors
+	 *  que este processo pode abrir
+	 **/
+	struct rlimit rlp;
+	getrlimit(RLIMIT_NOFILE, &rlp);
+	fprintf(stderr, "max fds before: %d %d\n", (int)rlp.rlim_cur, (int)rlp.rlim_max);
+	rlp.rlim_cur = 4000;
+	setrlimit(RLIMIT_NOFILE, &rlp);
+
+	getrlimit(RLIMIT_NOFILE, &rlp);
+	fprintf(stderr, "max fds after: %d %d\n", (int)rlp.rlim_cur, (int)rlp.rlim_max);
 
 	//contador
 	int i;
@@ -59,7 +72,6 @@ int main(){
 		if(write_to_client(connect_d, "Digite o nome do aquivo desejado\n", strlen("Digite o nome do aquivo desejado\n")) != -1){
 			fprintf(stderr, "VAI BLOCAR NO RECV\n");
 			read_from_client(connect_d, read_buffer, 255);
-			fprintf(stdout, "LEU A PORRA DO NOME DO ARQUIVO DO CLIENTE\n");
 			/**
 			 *	Tentativa de abrir arquivo fonte
 			 **/
@@ -120,7 +132,29 @@ int main(){
 }
 
 void *thread_function(void *args){
+
+	/**
+	 * 	Abrindo os sockets para as conexões TCP entre threads
+	 **/
+	int new_conn;
+	open_listener(&new_conn);
+	/*Colocando SERVER_PORT + args->thread_number vamos começar no 30000 e subir até o quanto precisarmos*/
+	bind_to_port(new_conn, SERVER_PORT + 1 + ((_thread_args*)args)->thread_number, 1);
+
+	if( listen(new_conn, 10) == -1){ /*no max 1 cliente tentando conexão*/
+		fprintf(stderr, "Unable to initialize listen operation... Shutting down!\n\n");
+		exit(1);
+	}
+
+	struct sockaddr_storage client_addr;
+	unsigned int address_size = sizeof(client_addr);
+	int transf_sock = accept(new_conn, (struct sockaddr*)&client_addr, &address_size);
+	if(transf_sock == -1){
+		fprintf(stderr, "\n\nNão foi possível abrir o segundo socket da THREAD %d\n\n", ((_thread_args*)args)->thread_number);
+	}
+
 	pthread_mutex_lock(&_lock);
+
 	char *file_segment;
 	file_segment = malloc(((_thread_args*)args)->chunk_size * sizeof(*file_segment));
 	int bytes_read;
@@ -137,10 +171,16 @@ void *thread_function(void *args){
 	sprintf(c_offset, "%d\n", ((_thread_args*)args)->file_offset);
 	sprintf(c_chunk_size, "%d\n", ((_thread_args*)args)->chunk_size);
 
-	write(((_thread_args*)args)->client_sock, c_offset, strlen(c_offset));
-	write(((_thread_args*)args)->client_sock, c_chunk_size, strlen(c_chunk_size));
-	write(((_thread_args*)args)->client_sock, file_segment, ((_thread_args*)args)->chunk_size);
+	send(transf_sock, c_offset, strlen(c_offset), 0);
+	send(transf_sock, c_chunk_size, strlen(c_chunk_size), 0);
+	send(transf_sock, file_segment, ((_thread_args*)args)->chunk_size, 0);
+
 	free(file_segment);
+
+	/**
+	 *	Fecha conexão TCP ao final da transmissão
+	 **/
+	close(new_conn);
 	pthread_mutex_unlock(&_lock);
 	return NULL;
 }

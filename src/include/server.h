@@ -12,7 +12,7 @@
 #define TRUE 1
 #define FALSE 1
 
-#define FIRST_GUESS_OFFSET 65536
+#define FIRST_GUESS_OFFSET 524288
 
 void *thread_function(void *args);
 int get_numberof_threads(int file_size);
