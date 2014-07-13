@@ -16,9 +16,7 @@
 *	Usando FIRST GUESS OFFSET calculo o número de threads necessárias para a execução da transferência
 **/
 
-//#define FIRST_GUESS_OFFSET 65536
-#define FIRST_GUESS_OFFSET 524288
-//#define FIRST_GUESS_OFFSET 8
+#define FIRST_GUESS_OFFSET 4194304
 
 void *thread_function(void *args);
 int get_numberof_threads(int file_size);
