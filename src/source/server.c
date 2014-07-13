@@ -21,13 +21,19 @@
 
 pthread_mutex_t _lock = PTHREAD_MUTEX_INITIALIZER;
 
-int main(){
+int main(int argc, char *argv[]){
 	int listener_d;			//socket que vai esperar pelas requests
 	int fd;					//file descriptors que serão usados.. quando o cliente for escrito, o to_write será apagado
 	char read_buffer[255];  //buffer usado para armazenar dados que vem do cliente
 	int number_of_threads;
 	int file_size;
 	int curr_offset = 0;
+
+	/*
+	 *	encontra o diretório de execução do programa
+	 **/
+	char exec_path[255];
+	readlink("/proc/self/exe", exec_path, 255);
 	/**
 	 *	setrlimit está sendo usado para aumentar o número limite de file descriptors
 	 *  que este processo pode abrir
@@ -75,7 +81,7 @@ int main(){
 			/**
 			 *	Tentativa de abrir arquivo fonte
 			 **/
-			char *file_path = build_file_path(read_buffer, 0);
+			char *file_path = build_file_path(read_buffer, exec_path);
 			fd = open(file_path, O_RDONLY);
 			free(file_path);
 
