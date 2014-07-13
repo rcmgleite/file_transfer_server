@@ -161,9 +161,7 @@ void *thread_function(void *args){
 	fprintf(stdout, "\nSERÃO LIDOS: %d\n", ((_thread_args*)args)->chunk_size);
 	fprintf(stdout, "THREAD NUMBER: %d\n", ((_thread_args*)args)->thread_number);
 	lseek(((_thread_args*)args)->fd, ((_thread_args*)args)->file_offset, SEEK_SET);
-	bytes_read = read(((_thread_args*)args)->fd, file_segment, ((_thread_args*)args)->chunk_size);
-	if(bytes_read < 0)
-		fprintf(stderr, "\nErro ao tentar ler arquivo pedido\n\n");
+
 	/**
 	 *	O cliente precisa do offset, do tamanho que terá que escrever(para ler) e do segment
 	 **/
@@ -173,7 +171,15 @@ void *thread_function(void *args){
 
 	send(transf_sock, c_offset, strlen(c_offset), 0);
 	send(transf_sock, c_chunk_size, strlen(c_chunk_size), 0);
-	send(transf_sock, file_segment, ((_thread_args*)args)->chunk_size, 0);
+
+	while(((_thread_args*)args)->chunk_size != 0){
+		bytes_read = read(((_thread_args*)args)->fd, file_segment, 2048);
+		if(bytes_read < 0)
+			fprintf(stderr, "\nErro ao tentar ler arquivo pedido\n\n");
+
+		send(transf_sock, file_segment, bytes_read, 0);
+		((_thread_args*)args)->chunk_size -= bytes_read;
+	}
 
 	free(file_segment);
 
