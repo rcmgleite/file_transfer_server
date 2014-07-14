@@ -19,7 +19,7 @@ void open_listener(int *listener){
 		fprintf(stderr, "%d", errno);
 		exit(1);
 	}
-	fprintf(stderr, "ABRIU O SOCKET COM SUCESSO\n");
+//	fprintf(stderr, "ABRIU O SOCKET COM SUCESSO\n");
 	*listener = _socket;
 }
 

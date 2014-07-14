@@ -13,6 +13,7 @@
 #include <arpa/inet.h>		//usado para criar endereços de internet
 #include <fcntl.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "server.h"
 #include "server_conn_utils.h"
@@ -76,14 +77,13 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "Abriu o socket de conexão com o cliente\n");
 
 		if(write_to_client(connect_d, "Digite o nome do aquivo desejado\n", strlen("Digite o nome do aquivo desejado\n")) != -1){
-			fprintf(stderr, "VAI BLOCAR NO RECV\n");
+//			fprintf(stderr, "VAI BLOCAR NO RECV\n");
 			read_from_client(connect_d, read_buffer, 255);
 			/**
 			 *	Tentativa de abrir arquivo fonte
 			 **/
 			char *file_path = build_file_path(read_buffer, exec_path);
 			fd = open(file_path, O_RDONLY);
-			free(file_path);
 
 			if(fd == -1){
 				fprintf(stderr, "Unable to open file!\n\n");
@@ -113,11 +113,19 @@ int main(int argc, char *argv[]){
 				struct thread_args *args;
 				args = (struct thread_args *)malloc(number_of_threads * sizeof(*args));
 
+				/*
+				 *	Contagem de tempo da transferência
+				 **/
+				clock_t begin, end;
+				double time_spent;
+
+				begin = clock();
+
 				/**
 				 *	Inicialização das threads
 				 **/
 				for(i = 0; i < number_of_threads; i++){
-					initialize_thread(&threads[i], &args[i], i, connect_d, fd, &file_size, &curr_offset);
+					initialize_thread(&threads[i], &args[i], i, connect_d, &file_size, &curr_offset, file_path);
 				}
 
 				//Apenas para o programa esperar as threads executarem
@@ -125,8 +133,13 @@ int main(int argc, char *argv[]){
 			        pthread_join(threads[i], NULL);
 			    }
 
+			    end = clock();
+			    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+			    fprintf(stderr, "Aqruivo transferido!\nTime elapsed: %f s", time_spent);
+
 			    // Limpo todos os dados para a próxima requesição
-			    clean_up(fd, threads, args, &number_of_threads, &file_size, &curr_offset);
+			    clean_up(fd, threads, args, &number_of_threads, &file_size, &curr_offset, file_path);
 			}
 		}else{
 			fprintf(stderr, "Erro ao escrever mensagem para o cliente");
@@ -138,7 +151,6 @@ int main(int argc, char *argv[]){
 }
 
 void *thread_function(void *args){
-
 	/**
 	 * 	Abrindo os sockets para as conexões TCP entre threads
 	 **/
@@ -159,14 +171,12 @@ void *thread_function(void *args){
 		fprintf(stderr, "\n\nNão foi possível abrir o segundo socket da THREAD %d\n\n", ((_thread_args*)args)->thread_number);
 	}
 
-	pthread_mutex_lock(&_lock);
+	int fd_read = open(((_thread_args*)args)->file_path, O_RDONLY);
 
 	char *file_segment;
 	file_segment = malloc(((_thread_args*)args)->chunk_size * sizeof(*file_segment));
 	int bytes_read;
-	fprintf(stdout, "\nSERÃO LIDOS: %d\n", ((_thread_args*)args)->chunk_size);
-	fprintf(stdout, "THREAD NUMBER: %d\n", ((_thread_args*)args)->thread_number);
-	lseek(((_thread_args*)args)->fd, ((_thread_args*)args)->file_offset, SEEK_SET);
+	lseek(fd_read, ((_thread_args*)args)->file_offset, SEEK_SET);
 
 	/**
 	 *	O cliente precisa do offset, do tamanho que terá que escrever(para ler) e do segment
@@ -175,15 +185,15 @@ void *thread_function(void *args){
 	sprintf(c_offset, "%d\n", ((_thread_args*)args)->file_offset);
 	sprintf(c_chunk_size, "%d\n", ((_thread_args*)args)->chunk_size);
 
-	send(transf_sock, c_offset, strlen(c_offset), 0);
-	send(transf_sock, c_chunk_size, strlen(c_chunk_size), 0);
+	write(transf_sock, c_offset, strlen(c_offset));
+	write(transf_sock, c_chunk_size, strlen(c_chunk_size));
 
 	while(((_thread_args*)args)->chunk_size != 0){
-		bytes_read = read(((_thread_args*)args)->fd, file_segment, 2048);
+		bytes_read = read(fd_read, file_segment, ((_thread_args*)args)->chunk_size);
 		if(bytes_read < 0)
 			fprintf(stderr, "\nErro ao tentar ler arquivo pedido\n\n");
 
-		send(transf_sock, file_segment, bytes_read, 0);
+		write(transf_sock, file_segment, bytes_read);
 		((_thread_args*)args)->chunk_size -= bytes_read;
 	}
 
@@ -193,14 +203,13 @@ void *thread_function(void *args){
 	 *	Fecha conexão TCP ao final da transmissão
 	 **/
 	close(new_conn);
-	pthread_mutex_unlock(&_lock);
 	return NULL;
 }
 
-void initialize_thread(pthread_t *thread, struct thread_args *args, int thread_number, int client_sock, int fd, int *file_size, int *curr_offset){
+void initialize_thread(pthread_t *thread, struct thread_args *args, int thread_number, int client_sock, int *file_size, int *curr_offset, char *file_path){
 	args->thread_number = thread_number;
 	args->client_sock = client_sock;
-	args->fd = fd;
+	args->file_path = file_path;
 	//parte da incialização que muda para cada thread
 
 	if(*file_size - FIRST_GUESS_OFFSET > 0){
@@ -225,10 +234,11 @@ int get_numberof_threads(int file_size){
 }
 
 void clean_up(int fd, pthread_t *threads, struct thread_args *args, int *number_of_threads,
-		int *file_size, int *curr_offset){
+		int *file_size, int *curr_offset, char *file_path){
     close(fd);
     free(threads);
     free(args);
+    free(file_path);
 	*number_of_threads = 0;
 	*file_size = 0;
 	*curr_offset = 0;
