@@ -27,8 +27,8 @@ int main(int argc, char *argv[]){
 	int fd;					//file descriptors que serão usados.. quando o cliente for escrito, o to_write será apagado
 	char read_buffer[255];  //buffer usado para armazenar dados que vem do cliente
 	int number_of_threads;
-	int file_size;
-	int curr_offset = 0;
+	long file_size;
+	long curr_offset = 0;
 
 	/*
 	 *	encontra o diretório de execução do programa
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]){
 			 *	Tentativa de abrir arquivo fonte
 			 **/
 			char *file_path = build_file_path(read_buffer, exec_path);
-			fd = open(file_path, O_RDONLY);
+			fd = open(file_path, O_RDWR);
 
 			if(fd == -1){
 				fprintf(stderr, "Unable to open file!\n\n");
@@ -91,9 +91,9 @@ int main(int argc, char *argv[]){
 			}
 			else{
 				file_size = lseek(fd, 0L, SEEK_END);	//Vou ao final do arquivo para poder saber o tamanho dele
-				lseek(fd, 0L, SEEK_SET);	//Volto para o início do arquivo para poder começar a operação
 
-				fprintf(stdout, "file_size: %d\n", file_size);
+				close(fd);
+				fprintf(stdout, "file_size: %lu\n", file_size);
 				/**
 				 *	Cálculo do número de threads necessárias usando o tamanho total do arquivo
 				 **/
@@ -116,10 +116,7 @@ int main(int argc, char *argv[]){
 				/*
 				 *	Contagem de tempo da transferência
 				 **/
-				clock_t begin, end;
-				double time_spent;
-
-				begin = clock();
+				clock_t tic = clock();
 
 				/**
 				 *	Inicialização das threads
@@ -133,13 +130,13 @@ int main(int argc, char *argv[]){
 			        pthread_join(threads[i], NULL);
 			    }
 
-			    end = clock();
-			    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+			    clock_t toc = clock();
 
-			    fprintf(stderr, "Aqruivo transferido!\nTime elapsed: %f s", time_spent);
+			    fprintf(stderr, "Aqruivo transferido!\n");
+			    fprintf(stderr, "Time elapsed: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
 			    // Limpo todos os dados para a próxima requesição
-			    clean_up(fd, threads, args, &number_of_threads, &file_size, &curr_offset, file_path);
+			    clean_up(threads, args, &number_of_threads, &file_size, &curr_offset, file_path);
 			}
 		}else{
 			fprintf(stderr, "Erro ao escrever mensagem para o cliente");
@@ -171,7 +168,7 @@ void *thread_function(void *args){
 		fprintf(stderr, "\n\nNão foi possível abrir o segundo socket da THREAD %d\n\n", ((_thread_args*)args)->thread_number);
 	}
 
-	int fd_read = open(((_thread_args*)args)->file_path, O_RDONLY);
+	int fd_read = open(((_thread_args*)args)->file_path, O_RDWR);
 
 	char *file_segment;
 	file_segment = malloc(((_thread_args*)args)->chunk_size * sizeof(*file_segment));
@@ -182,8 +179,8 @@ void *thread_function(void *args){
 	 *	O cliente precisa do offset, do tamanho que terá que escrever(para ler) e do segment
 	 **/
 	char c_offset[30], c_chunk_size[30];
-	sprintf(c_offset, "%d\n", ((_thread_args*)args)->file_offset);
-	sprintf(c_chunk_size, "%d\n", ((_thread_args*)args)->chunk_size);
+	sprintf(c_offset, "%lu\n", ((_thread_args*)args)->file_offset);
+	sprintf(c_chunk_size, "%lu\n", ((_thread_args*)args)->chunk_size);
 
 	write(transf_sock, c_offset, strlen(c_offset));
 	write(transf_sock, c_chunk_size, strlen(c_chunk_size));
@@ -206,7 +203,7 @@ void *thread_function(void *args){
 	return NULL;
 }
 
-void initialize_thread(pthread_t *thread, struct thread_args *args, int thread_number, int client_sock, int *file_size, int *curr_offset, char *file_path){
+void initialize_thread(pthread_t *thread, struct thread_args *args, int thread_number, int client_sock, long *file_size, long *curr_offset, char *file_path){
 	args->thread_number = thread_number;
 	args->client_sock = client_sock;
 	args->file_path = file_path;
@@ -229,13 +226,12 @@ void initialize_thread(pthread_t *thread, struct thread_args *args, int thread_n
 	pthread_create(thread, NULL, thread_function, (void*)args);
 }
 
-int get_numberof_threads(int file_size){
+int get_numberof_threads(long file_size){
 	return (file_size / FIRST_GUESS_OFFSET + 1);
 }
 
-void clean_up(int fd, pthread_t *threads, struct thread_args *args, int *number_of_threads,
-		int *file_size, int *curr_offset, char *file_path){
-    close(fd);
+void clean_up(pthread_t *threads, struct thread_args *args, int *number_of_threads,
+		long *file_size, long *curr_offset, char *file_path){
     free(threads);
     free(args);
     free(file_path);

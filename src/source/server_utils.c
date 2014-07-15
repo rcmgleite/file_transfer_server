@@ -47,10 +47,10 @@ int read_from_client(int sock, char *buf, int len){
 }
 
 
-void print_header(int sock, int number_of_threads, int file_size){
+void print_header(int sock, int number_of_threads, long file_size){
 	char n_threads_string[255], file_size_string[255];
 	sprintf(n_threads_string, "%d\n", number_of_threads);
-	sprintf(file_size_string, "%d\n", file_size);
+	sprintf(file_size_string, "%lu\n", file_size);
 	int size = strlen(n_threads_string) + strlen(file_size_string);
 	char *header = malloc(size*sizeof(char));
 	strcat(header, n_threads_string);
