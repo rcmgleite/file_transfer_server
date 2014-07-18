@@ -24,11 +24,23 @@
 //#define FIRST_GUESS_OFFSET 16777216		//15 threads - Supernatural.S08E21.HDTV.x264-LOL.mp4
 //#define FIRST_GUESS_OFFSET 8388608			//29 threads - Supernatural.S08E21.HDTV.x264-LOL.mp4
 //#define FIRST_GUESS_OFFSET 243184257
-#define FIRST_GUESS_OFFSET 2928660482		//single thread - 3G
+//#define FIRST_GUESS_OFFSET 2928660482		//single thread - 3G
 //#define FIRST_GUESS_OFFSET	1464330242		// 2 threads - 3G
 //#define FIRST_GUESS_OFFSET 1073741824		//3 threads - 3G
 //#define FIRST_GUESS_OFFSET 536870912		//6 threads - 3G
 //#define FIRST_GUESS_OFFSET 268435456		//11 threads - 3G
+
+//#define	FIRST_GUESS_OFFSET 1498398722		//1 thread - 1.5G
+//#define	FIRST_GUESS_OFFSET 715130882		//2 thread - 1.5G
+//#define	FIRST_GUESS_OFFSET 357565442		//4 thread - 1.5G
+//#define	FIRST_GUESS_OFFSET 178782722		//8 thread - 1.5G
+//#define	FIRST_GUESS_OFFSET 89391362			//16 thread - 1.5G
+
+//#define FIRST_GUESS_OFFSET 271086672			//1 thread 300M
+//#define FIRST_GUESS_OFFSET 135543336			//2 thread 300M
+#define FIRST_GUESS_OFFSET 67771668			//4 thread 300M
+
+#define MAX_WRITE_SIZE 536870912
 
 void *thread_function(void *args);
 int get_numberof_threads(long file_size);

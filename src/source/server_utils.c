@@ -59,3 +59,8 @@ void print_header(int sock, int number_of_threads, long file_size){
 	fprintf(stderr, "%s\n", header);
 	free(header);
 }
+
+void print_init_transmission(int sock){
+	char init[] = "init";
+	write_to_client(sock, init, strlen(init));
+}

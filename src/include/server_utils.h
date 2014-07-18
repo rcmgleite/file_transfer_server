@@ -21,4 +21,5 @@ char *build_file_path(char* file_name, char *dir_path);
 int read_from_client(int sock, char *buf, int len);
 int write_to_client(int sock, char *buf, int length);
 void print_header(int sock, int number_of_threads, long file_size);
+void print_init_transmission(int sock);
 #endif /* SERVER_UTILS_H_ */

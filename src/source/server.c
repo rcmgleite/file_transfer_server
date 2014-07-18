@@ -13,7 +13,7 @@
 #include <arpa/inet.h>		//usado para criar endereços de internet
 #include <fcntl.h>
 #include <pthread.h>
-#include <time.h>
+#include <sys/time.h>
 
 #include "server.h"
 #include "server_conn_utils.h"
@@ -77,7 +77,6 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "Abriu o socket de conexão com o cliente\n");
 
 		if(write_to_client(connect_d, "Digite o nome do aquivo desejado\n", strlen("Digite o nome do aquivo desejado\n")) != -1){
-//			fprintf(stderr, "VAI BLOCAR NO RECV\n");
 			read_from_client(connect_d, read_buffer, 255);
 			/**
 			 *	Tentativa de abrir arquivo fonte
@@ -114,9 +113,11 @@ int main(int argc, char *argv[]){
 				args = (struct thread_args *)malloc(number_of_threads * sizeof(*args));
 
 				/*
-				 *	Contagem de tempo da transferência
-				 **/
-				clock_t tic = clock();
+				 * 	Cálculo de tempo
+				 * */
+
+				 struct timeval tvalBefore, tvalAfter;  // removed comma
+				 gettimeofday (&tvalBefore, NULL);
 
 				/**
 				 *	Inicialização das threads
@@ -125,16 +126,23 @@ int main(int argc, char *argv[]){
 					initialize_thread(&threads[i], &args[i], i, connect_d, &file_size, &curr_offset, file_path);
 				}
 
+				/*
+				 *	Novo teste
+				 **/
+				print_init_transmission(connect_d);
+
 				//Apenas para o programa esperar as threads executarem
 			    for (i = 0; i < number_of_threads; i++){
 			        pthread_join(threads[i], NULL);
 			    }
 
-			    clock_t toc = clock();
-
+			    gettimeofday (&tvalAfter, NULL);
 			    fprintf(stderr, "Aqruivo transferido!\n");
-			    fprintf(stderr, "Time elapsed: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
+				printf("Time Elapsed: %f sec\n",
+							                ((tvalAfter.tv_sec - tvalBefore.tv_sec)
+							               + (tvalAfter.tv_usec - tvalBefore.tv_usec)/(float)1000000)
+							              );;
 			    // Limpo todos os dados para a próxima requesição
 			    clean_up(threads, args, &number_of_threads, &file_size, &curr_offset, file_path);
 			}
@@ -172,7 +180,7 @@ void *thread_function(void *args){
 
 	char *file_segment;
 	file_segment = malloc(((_thread_args*)args)->chunk_size * sizeof(*file_segment));
-	int bytes_read;
+	long bytes_read;
 	lseek(fd_read, ((_thread_args*)args)->file_offset, SEEK_SET);
 
 	/**
@@ -185,13 +193,25 @@ void *thread_function(void *args){
 	write(transf_sock, c_offset, strlen(c_offset));
 	write(transf_sock, c_chunk_size, strlen(c_chunk_size));
 
+	long write_size;
+
+	if(((_thread_args*)args)->chunk_size <= MAX_WRITE_SIZE){
+		write_size = ((_thread_args*)args)->chunk_size;
+	}
+	else{
+		write_size = MAX_WRITE_SIZE;
+	}
+
 	while(((_thread_args*)args)->chunk_size != 0){
-		bytes_read = read(fd_read, file_segment, ((_thread_args*)args)->chunk_size);
+		bytes_read = read(fd_read, file_segment, write_size);
 		if(bytes_read < 0)
 			fprintf(stderr, "\nErro ao tentar ler arquivo pedido\n\n");
 
 		write(transf_sock, file_segment, bytes_read);
 		((_thread_args*)args)->chunk_size -= bytes_read;
+		if(write_size >= ((_thread_args*)args)->chunk_size){
+			write_size = ((_thread_args*)args)->chunk_size;
+		}
 	}
 
 	free(file_segment);
