@@ -20,6 +20,7 @@
 
 pthread_mutex_t _lock = PTHREAD_MUTEX_INITIALIZER;
 
+
 int main(){
 	int listener_d;			//socket que vai esperar pelas requests
 	int fd;					//file descriptors que serão usados.. quando o cliente for escrito, o to_write será apagado
