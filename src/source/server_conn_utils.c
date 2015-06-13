@@ -16,8 +16,10 @@ void open_listener(int *listener){
 	int _socket = socket(PF_INET, SOCK_STREAM, 0);
 	if(_socket == -1){
 		fprintf(stderr, "Unable to open listener socket!\nTerminating program...");
+		fprintf(stderr, "%d", errno);
 		exit(1);
 	}
+//	fprintf(stderr, "ABRIU O SOCKET COM SUCESSO\n");
 	*listener = _socket;
 }
 
@@ -34,6 +36,7 @@ void bind_to_port(int _socket, int _port, int reuse){
 	name.sin_addr.s_addr = htonl(INADDR_ANY);				//qual o tipo de ip que pode ser usado(apenas um filtro)
 	int my_bind = bind(_socket, (struct sockaddr *) &name, sizeof(name)); //bind do socket para a porta
 	if(my_bind == -1){
+		fprintf(stderr, "port: %d\n", _port);
 		fprintf(stderr, "Unable to bind socket... Shutting down!\n");
 		exit(1);
 	}
