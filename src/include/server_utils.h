@@ -12,12 +12,21 @@
 #include <arpa/inet.h>		//usado para criar endereços de internet
 #include <fcntl.h>
 
-//CONFIGS
-#define SERVER_PORT 30000
 #define PROGRAM_NAME "proj_redes_server"
-//CONFIGS
+#define MAX_WRITE_SIZE 10240
 
-char *build_file_path(char* file_name, char *dir_path);
+typedef struct thread_args{
+	int client_sock;
+	long file_offset;
+	long chunk_size;
+	int thread_number;
+	char *file_path;
+}_thread_args;
+
+void build_args(struct thread_args *args, int thread_number, int client_sock, long *file_size, long *curr_offset, char *file_path);
+void* thread_function(void *args);
+
+char* format_file_path(char* file_name);
 int read_from_client(int sock, char *buf, int len);
 int write_to_client(int sock, char *buf, int length);
 void print_header(int sock, int number_of_threads, long file_size);

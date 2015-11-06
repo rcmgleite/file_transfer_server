@@ -12,47 +12,8 @@
 #define TRUE 1
 #define FALSE 1
 
-/*
-*	Usando FIRST GUESS OFFSET calculo o número de threads necessárias para a execução da transferência
-**/
+#define SERVER_PORT 30000
+#define N_THREADS 4
+#define MAX_CONN 30
 
-//#define FIRST_GUESS_OFFSET 4194304
-//#define FIRST_GUESS_OFFSET 243184258		//single thread - Supernatural.S08E21.HDTV.x264-LOL.mp4
-//#define FIRST_GUESS_OFFSET 134217728		//2 thread - Supernatural.S08E21.HDTV.x264-LOL.mp4
-//#define FIRST_GUESS_OFFSET 67108864		//4 threads - Supernatural.S08E21.HDTV.x264-LOL.mp4
-//#define FIRST_GUESS_OFFSET 33554432		//8 threads - Supernatural.S08E21.HDTV.x264-LOL.mp4
-//#define FIRST_GUESS_OFFSET 16777216		//15 threads - Supernatural.S08E21.HDTV.x264-LOL.mp4
-//#define FIRST_GUESS_OFFSET 8388608			//29 threads - Supernatural.S08E21.HDTV.x264-LOL.mp4
-//#define FIRST_GUESS_OFFSET 243184257
-//#define FIRST_GUESS_OFFSET 2928660482		//single thread - 3G
-//#define FIRST_GUESS_OFFSET	1464330242		// 2 threads - 3G
-//#define FIRST_GUESS_OFFSET 1073741824		//3 threads - 3G
-//#define FIRST_GUESS_OFFSET 536870912		//6 threads - 3G
-//#define FIRST_GUESS_OFFSET 268435456		//11 threads - 3G
-
-//#define	FIRST_GUESS_OFFSET 1498398722		//1 thread - 1.5G
-//#define	FIRST_GUESS_OFFSET 715130882		//2 thread - 1.5G
-//#define	FIRST_GUESS_OFFSET 357565442		//4 thread - 1.5G
-//#define	FIRST_GUESS_OFFSET 178782722		//8 thread - 1.5G
-//#define	FIRST_GUESS_OFFSET 89391362			//16 thread - 1.5G
-
-//#define FIRST_GUESS_OFFSET 271086672			//1 thread 300M
-//#define FIRST_GUESS_OFFSET 135543336			//2 thread 300M
-#define FIRST_GUESS_OFFSET 67771668			//4 thread 300M
-
-#define MAX_WRITE_SIZE 536870912
-
-void *thread_function(void *args);
-int get_numberof_threads(long file_size);
-
-typedef struct thread_args{
-	int client_sock;
-	long file_offset;
-	long chunk_size;
-	int thread_number;
-	char *file_path;
-}_thread_args;
-void initialize_thread(pthread_t *thread, struct thread_args *args, int thread_number, int client_sock, long *file_size, long *curr_offset, char *file_path);
-void clean_up(pthread_t *threads, struct thread_args *args, int *number_of_threads,
-		long *file_size, long *curr_offset, char *file_path);
 #endif /* SERVER_H_ */
