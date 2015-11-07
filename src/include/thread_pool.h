@@ -16,5 +16,6 @@
 typedef struct thread_pool_t thread_pool_t;
 thread_pool_t* new_thread_pool(unsigned n_threads);
 int pool_add_job(thread_pool_t* pool, void* (*func) (void*), void* arg);
+void pool_wait_finish(thread_pool_t* pool);
 
 #endif /* SRC_INCLUDE_THREAD_POOL_H_ */

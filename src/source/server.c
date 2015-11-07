@@ -97,6 +97,8 @@ int main(int argc, char *argv[]){
 					pool_add_job(pool, thread_function, (void*) (&args[i]));
 				}
 
+				pool_wait_finish(pool);
+
 			    gettimeofday (&tvalAfter, NULL);
 			    fprintf(stderr, "Aqruivo transferido!\n");
 

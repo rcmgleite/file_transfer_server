@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "thread_pool.h"
 #include "utils.h"
@@ -45,7 +46,6 @@ typedef struct thread_pool_t {
 	thread_t* threads;
 	job_queue_t queue;
 	pthread_cond_t has_jobs;
-	volatile unsigned n_threads_blocked;
 	volatile unsigned n_threads_working;
 	unsigned n_threads;
 	pthread_mutex_t mutex;
@@ -81,7 +81,6 @@ thread_pool_t* new_thread_pool(unsigned n_threads) {
 	}
 
 	pool->n_threads = n_threads;
-	pool->n_threads_blocked = 0;
 	pool->n_threads_working = 0;
 
 	alloc_threads(pool, n_threads);
@@ -125,6 +124,27 @@ int pool_add_job(thread_pool_t* pool, void* (*func) (void*), void* arg) {
 
 	pthread_mutex_unlock(&pool->mutex);
 	return 1;
+}
+
+/*
+ * 	Waits until there are no jobs left to execute
+ */
+void pool_wait_finish(thread_pool_t* pool) {
+	struct timeval timeout;
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 1000000;
+	while(1) {
+		DEBUG("");
+		pthread_mutex_lock(&pool->mutex);
+		if((pool->queue.length == 0 && pool->n_threads_working == 0)){
+			DEBUG("");
+			pthread_mutex_unlock(&pool->mutex);
+			return;
+		}
+		pthread_mutex_unlock(&pool->mutex);
+		select (0 ,NULL, NULL, NULL, &timeout);
+	}
+	DEBUG("");
 }
 
 /*
@@ -181,6 +201,7 @@ static void* thread_func(void *args) {
 			DEBUG("Wating for jobs...");
 			pthread_cond_wait(&pool->has_jobs, &pool->mutex);
 		}
+		pool->n_threads_working++;
 		DEBUG("Got a Job!");
 
 		job_t* job = next_job(&pool->queue);
@@ -189,6 +210,10 @@ static void* thread_func(void *args) {
 
 		pthread_mutex_unlock(&pool->mutex);
 		job->func(job->arg);
+
+		pthread_mutex_lock(&pool->mutex);
+		pool->n_threads_working--;
+		pthread_mutex_unlock(&pool->mutex);
 	}
 
 	return NULL;
